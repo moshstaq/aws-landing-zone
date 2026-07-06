@@ -81,8 +81,11 @@ resource "aws_iam_role_policy" "github_actions" {
 
 data "aws_iam_policy_document" "terraform_trust" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
 
     principals {
       type        = "AWS"
