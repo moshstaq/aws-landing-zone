@@ -56,12 +56,15 @@ resource "aws_iam_role" "github_actions" {
 
 data "aws_iam_policy_document" "github_actions_permissions" {
   statement {
-    effect = "Allow"
-    actions = [
-      "sts:AssumeRole",
-      "sts:TagSession"
-    ]
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
     resources = [aws_iam_role.terraform.arn]
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:TagSession"]
+    resources = ["*"]
   }
 }
 
