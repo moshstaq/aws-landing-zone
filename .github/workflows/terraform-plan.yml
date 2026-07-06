@@ -1,0 +1,117 @@
+name: Terraform Plan
+
+on:
+    pull_request:
+        branches: [main]
+        paths:
+            - "platform/**"
+
+permissions:
+    id-token: write
+    contents: read
+    pull-requests: write
+
+env:
+    AWS_REGION: us-east-1
+    TF_VERSION: 1.5.7
+
+jobs:
+    plan:
+        name: Plan - ${{ matrix.name }}
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - name: platform-identity
+                      path: platform/identity/github-oidc
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+                  role-session-name: GitHubActions
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Assume Terraform Role
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE }}
+                  role-session-name: Terraform
+                  aws-region: ${{ env.AWS_REGION }}
+                  role-chaining: true
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: ${{ env.TF_VERSION }}
+
+            - name: Terraform Init
+              working-directory: ${{ matrix.path }}
+              run: terraform init
+
+            - name: Terraform Validate
+              working-directory: ${{ matrix.path }}
+              run: terraform validate
+
+            - name: Terraform Plan
+              id: plan
+              working-directory: ${{ matrix.path }}
+              run: |
+                  terraform plan -no-color -input=false \
+                    -out=tfplan 2>&1 | tee plan_output.txt
+                  echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+              continue-on-error: true
+
+            - name: Post Plan to PR
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const fs = require('fs');
+                      const plan = fs.readFileSync(
+                        '${{ matrix.path }}/plan_output.txt', 'utf8'
+                      );
+                      const status = '${{ steps.plan.outputs.exitcode }}' === '0'
+                        ? '✅' : '❌';
+
+                      const body = `### ${status} Terraform Plan — \`${{ matrix.name }}\`
+                      <details>
+                      <summary>Show Plan</summary>
+
+                      \`\`\`hcl
+                      ${plan.slice(0, 60000)}
+                      \`\`\`
+                      </details>
+
+                      *Triggered by @${{ github.actor }}*`;
+
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                      });
+
+                      const existing = comments.find(c =>
+                        c.user.type === 'Bot' &&
+                        c.body.includes('${{ matrix.name }}')
+                      );
+
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: existing.id,
+                          body
+                        });
+                      } else {
+                        await github.rest.issues.createComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: context.issue.number,
+                          body
+                        });
+                      }
