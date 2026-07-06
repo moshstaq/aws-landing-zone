@@ -133,7 +133,7 @@ data "aws_iam_policy_document" "terraform_permissions" {
     ]
   }
 
-  # IAM management for subsequent modules
+  # IAM management
   statement {
     effect = "Allow"
     actions = [
@@ -141,6 +141,8 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "iam:DeleteRole",
       "iam:GetRole",
       "iam:ListRoles",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
       "iam:AttachRolePolicy",
       "iam:DetachRolePolicy",
       "iam:PutRolePolicy",
@@ -150,7 +152,9 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "iam:DeleteOpenIDConnectProvider",
       "iam:GetOpenIDConnectProvider",
       "iam:TagOpenIDConnectProvider",
-      "iam:PassRole"
+      "iam:ListOpenIDConnectProviders",
+      "iam:PassRole",
+      "iam:UpdateAssumeRolePolicy"
     ]
     resources = ["*"]
   }
