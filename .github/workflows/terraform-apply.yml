@@ -1,0 +1,64 @@
+name: Terraform Apply
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "platform/**"
+
+permissions:
+    id-token: write
+    contents: read
+
+env:
+    AWS_REGION: us-east-1
+    TF_VERSION: 1.5.7
+
+jobs:
+    apply:
+        name: Apply - ${{ matrix.name }}
+        runs-on: ubuntu-latest
+        environment: aws-production
+        strategy:
+            fail-fast: false
+            max-parallel: 1
+            matrix:
+                include:
+                    - name: platform-identity
+                      path: platform/identity/github-oidc
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+                  role-session-name: GitHubActions
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Assume Terraform Role
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE }}
+                  role-session-name: Terraform
+                  aws-region: ${{ env.AWS_REGION }}
+                  role-chaining: true
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: ${{ env.TF_VERSION }}
+
+            - name: Terraform Init
+              working-directory: ${{ matrix.path }}
+              run: terraform init
+
+            - name: Terraform Plan
+              working-directory: ${{ matrix.path }}
+              run: terraform plan -no-color -input=false -out=tfplan
+
+            - name: Terraform Apply
+              working-directory: ${{ matrix.path }}
+              run: terraform apply -input=false tfplan
