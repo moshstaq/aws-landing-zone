@@ -63,6 +63,12 @@ data "aws_iam_policy_document" "github_actions_permissions" {
     ]
     resources = [aws_iam_role.terraform.arn]
   }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:TagSession"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions" {
@@ -78,8 +84,11 @@ resource "aws_iam_role_policy" "github_actions" {
 
 data "aws_iam_policy_document" "terraform_trust" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
 
     principals {
       type        = "AWS"
@@ -127,7 +136,7 @@ data "aws_iam_policy_document" "terraform_permissions" {
     ]
   }
 
-  # IAM management for subsequent modules
+  # IAM management
   statement {
     effect = "Allow"
     actions = [
@@ -135,6 +144,8 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "iam:DeleteRole",
       "iam:GetRole",
       "iam:ListRoles",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
       "iam:AttachRolePolicy",
       "iam:DetachRolePolicy",
       "iam:PutRolePolicy",
@@ -144,7 +155,9 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "iam:DeleteOpenIDConnectProvider",
       "iam:GetOpenIDConnectProvider",
       "iam:TagOpenIDConnectProvider",
-      "iam:PassRole"
+      "iam:ListOpenIDConnectProviders",
+      "iam:PassRole",
+      "iam:UpdateAssumeRolePolicy"
     ]
     resources = ["*"]
   }
