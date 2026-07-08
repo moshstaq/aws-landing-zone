@@ -30,7 +30,7 @@ jobs:
       - name: Determine modules
         id: set-matrix
         run: |
-          MODULES=$(cat .github/terraform-modules.json)
+          MODULES=$(cat .github/workflows/terraform-modules.json)
           AFFECTED=$(echo "$MODULES" | jq -c \
             '[.modules[] | select(.ci_enabled == true)]')
 
