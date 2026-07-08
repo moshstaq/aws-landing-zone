@@ -1,118 +1,150 @@
 name: Terraform Plan
 
 on:
-    pull_request:
-        branches: [main]
-        paths:
-            - "platform/**"
-            - ".github/workflows/terraform-plan.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "platform/**"
+      - ".github/workflows/terraform-plan.yml"
 
 permissions:
-    id-token: write
-    contents: read
-    pull-requests: write
+  id-token: write
+  contents: read
+  pull-requests: write
 
 env:
-    AWS_REGION: us-east-1
-    TF_VERSION: 1.5.7
+  AWS_REGION: us-east-1
+  TF_VERSION: 1.5.7
 
 jobs:
-    plan:
-        name: Plan - ${{ matrix.name }}
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - name: platform-identity
-                      path: platform/identity/github-oidc
+  detect-changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+      - name: Determine modules
+        id: set-matrix
+        run: |
+          MODULES=$(cat .github/terraform-modules.json)
+          AFFECTED=$(echo "$MODULES" | jq -c \
+            '[.modules[] | select(.ci_enabled == true)]')
 
-            - name: Configure AWS Credentials
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-                  role-session-name: GitHubActions
-                  aws-region: ${{ env.AWS_REGION }}
+          if [ "$AFFECTED" == "[]" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":$AFFECTED}" >> $GITHUB_OUTPUT
+          fi
 
-            - name: Assume Terraform Role
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE }}
-                  role-session-name: Terraform
-                  aws-region: ${{ env.AWS_REGION }}
-                  role-chaining: true
+  plan:
+    name: Plan - ${{ matrix.name }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Setup Terraform
-              uses: hashicorp/setup-terraform@v3
-              with:
-                  terraform_version: ${{ env.TF_VERSION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions
+          aws-region: ${{ env.AWS_REGION }}
 
-            - name: Terraform Init
-              working-directory: ${{ matrix.path }}
-              run: terraform init
+      - name: Assume Terraform Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE }}
+          role-session-name: Terraform
+          aws-region: ${{ env.AWS_REGION }}
+          role-chaining: true
 
-            - name: Terraform Validate
-              working-directory: ${{ matrix.path }}
-              run: terraform validate
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
-            - name: Terraform Plan
-              id: plan
-              working-directory: ${{ matrix.path }}
-              run: |
-                  terraform plan -no-color -input=false \
-                    -out=tfplan 2>&1 | tee plan_output.txt
-                  echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
-              continue-on-error: true
+      - name: Terraform Init
+        working-directory: ${{ matrix.path }}
+        run: terraform init
 
-            - name: Post Plan to PR
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const fs = require('fs');
-                      const plan = fs.readFileSync(
-                        '${{ matrix.path }}/plan_output.txt', 'utf8'
-                      );
-                      const status = '${{ steps.plan.outputs.exitcode }}' === '0'
-                        ? '✅' : '❌';
+      - name: Terraform Validate
+        working-directory: ${{ matrix.path }}
+        run: terraform validate
 
-                      const body = `### ${status} Terraform Plan — \`${{ matrix.name }}\`
-                      <details>
-                      <summary>Show Plan</summary>
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ matrix.path }}
+        run: |
+          terraform plan -no-color -input=false \
+            -out=tfplan 2>&1 | tee plan_output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        continue-on-error: true
 
-                      \`\`\`hcl
-                      ${plan.slice(0, 60000)}
-                      \`\`\`
-                      </details>
+      - name: Post Plan to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync(
+              '${{ matrix.path }}/plan_output.txt', 'utf8'
+            );
+            const status = '${{ steps.plan.outputs.exitcode }}' === '0'
+              ? '✅' : '❌';
 
-                      *Triggered by @${{ github.actor }}*`;
+            const body = `### ${status} Terraform Plan — \`${{ matrix.name }}\`
+            <details>
+            <summary>Show Plan</summary>
 
-                      const { data: comments } = await github.rest.issues.listComments({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        issue_number: context.issue.number,
-                      });
+            \`\`\`hcl
+            ${plan.slice(0, 60000)}
+            \`\`\`
+            </details>
 
-                      const existing = comments.find(c =>
-                        c.user.type === 'Bot' &&
-                        c.body.includes('${{ matrix.name }}')
-                      );
+            *Triggered by @${{ github.actor }}*`;
 
-                      if (existing) {
-                        await github.rest.issues.updateComment({
-                          owner: context.repo.owner,
-                          repo: context.repo.repo,
-                          comment_id: existing.id,
-                          body
-                        });
-                      } else {
-                        await github.rest.issues.createComment({
-                          owner: context.repo.owner,
-                          repo: context.repo.repo,
-                          issue_number: context.issue.number,
-                          body
-                        });
-                      }
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('${{ matrix.name }}')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+  no-changes:
+    name: No CI-Enabled Modules
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report
+        run: echo "No CI-enabled modules found"

@@ -1,64 +1,76 @@
 name: Terraform Apply
 
 on:
-    push:
-        branches: [main]
-        paths:
-            - "platform/**"
+  push:
+    branches: [main]
+    paths:
+      - "platform/**"
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
 
 env:
-    AWS_REGION: us-east-1
-    TF_VERSION: 1.5.7
+  AWS_REGION: us-east-1
+  TF_VERSION: 1.5.7
 
 jobs:
-    apply:
-        name: Apply - ${{ matrix.name }}
-        runs-on: ubuntu-latest
-        environment: aws-production
-        strategy:
-            fail-fast: false
-            max-parallel: 1
-            matrix:
-                include:
-                    - name: platform-identity
-                      path: platform/identity/github-oidc
+  detect-changes:
+    name: Detect Changed Modules
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+      - name: Determine modules
+        id: set-matrix
+        run: |
+          MODULES=$(cat .github/terraform-modules.json)
+          AFFECTED=$(echo "$MODULES" | jq -c \
+            '[.modules[] | select(.ci_enabled == true)]')
 
-            - name: Configure AWS Credentials
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-                  role-session-name: GitHubActions
-                  aws-region: ${{ env.AWS_REGION }}
+          if [ "$AFFECTED" == "[]" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":$AFFECTED}" >> $GITHUB_OUTPUT
+          fi
 
-            - name: Assume Terraform Role
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE }}
-                  role-session-name: Terraform
-                  aws-region: ${{ env.AWS_REGION }}
-                  role-chaining: true
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Setup Terraform
-              uses: hashicorp/setup-terraform@v3
-              with:
-                  terraform_version: ${{ env.TF_VERSION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions
+          aws-region: ${{ env.AWS_REGION }}
 
-            - name: Terraform Init
-              working-directory: ${{ matrix.path }}
-              run: terraform init
+      - name: Assume Terraform Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE }}
+          role-session-name: Terraform
+          aws-region: ${{ env.AWS_REGION }}
+          role-chaining: true
 
-            - name: Terraform Plan
-              working-directory: ${{ matrix.path }}
-              run: terraform plan -no-color -input=false -out=tfplan
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
-            - name: Terraform Apply
-              working-directory: ${{ matrix.path }}
-              run: terraform apply -input=false tfplan
+      - name: Terraform Init
+        working-directory: ${{ matrix.path }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ${{ matrix.path }}
+        run: terraform plan -no-color -input=false -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ${{ matrix.path }}
+        run: terraform apply -input=false tfplan
