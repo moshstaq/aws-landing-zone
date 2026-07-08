@@ -28,7 +28,7 @@ jobs:
       - name: Determine modules
         id: set-matrix
         run: |
-          MODULES=$(cat .github/workflows/terraform-modules.json)
+          MODULES=$(cat .github/terraform-modules.json)
           AFFECTED=$(echo "$MODULES" | jq -c \
             '[.modules[] | select(.ci_enabled == true)]')
 
@@ -40,6 +40,17 @@ jobs:
             echo "matrix={\"include\":$AFFECTED}" >> $GITHUB_OUTPUT
           fi
 
+  apply:
+    name: Apply - ${{ matrix.name }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    environment: aws-production
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -74,3 +85,12 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ matrix.path }}
         run: terraform apply -input=false tfplan
+
+  no-changes:
+    name: No CI-Enabled Modules
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report
+        run: echo "No CI-enabled modules found"
