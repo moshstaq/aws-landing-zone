@@ -95,6 +95,22 @@ resource "aws_s3_bucket_lifecycle_configuration" "application" {
 
 data "aws_iam_policy_document" "application_bucket_policy" {
   statement {
+    sid    = "AllowTerraformRole"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::688365520256:role/role-terraform-aws-landing-zone"]
+    }
+
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.application.arn,
+      "${aws_s3_bucket.application.arn}/*"
+    ]
+  }
+
+  statement {
     sid    = "DenyNonHTTPS"
     effect = "Deny"
 
@@ -104,7 +120,6 @@ data "aws_iam_policy_document" "application_bucket_policy" {
     }
 
     actions = ["s3:*"]
-
     resources = [
       aws_s3_bucket.application.arn,
       "${aws_s3_bucket.application.arn}/*"
@@ -122,4 +137,5 @@ resource "aws_s3_bucket_policy" "application" {
   bucket = aws_s3_bucket.application.id
   policy = data.aws_iam_policy_document.application_bucket_policy.json
 }
+
 
