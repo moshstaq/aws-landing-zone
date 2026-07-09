@@ -253,7 +253,16 @@ data "aws_iam_policy_document" "terraform_s3" {
       "s3:PutBucketTagging",
       "s3:ListAllMyBuckets",
       "s3:GetBucketLocation",
-      "s3:GetBucketRequestPayment"
+      "s3:GetBucketRequestPayment",
+      "s3:HeadBucket",
+      "s3:HeadObject",
+      "s3:GetBucketAcl",
+      "s3:GetBucketCORS",
+      "s3:GetBucketLogging",
+      "s3:GetBucketObjectLockConfiguration",
+      "s3:GetBucketReplication",
+      "s3:GetBucketWebsite",
+      "s3:GetAccelerateConfiguration"
     ]
     resources = ["*"]
   }
