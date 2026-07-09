@@ -152,7 +152,17 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "iam:TagOpenIDConnectProvider",
       "iam:ListOpenIDConnectProviders",
       "iam:PassRole",
-      "iam:UpdateAssumeRolePolicy"
+      "iam:UpdateAssumeRolePolicy",
+      "iam:GetInstanceProfile",
+      "iam:CreateInstanceProfile",
+      "iam:DeleteInstanceProfile",
+      "iam:AddRoleToInstanceProfile",
+      "iam:RemoveRoleFromInstanceProfile",
+      "iam:ListInstanceProfiles",
+      "iam:ListInstanceProfilesForRole",
+      "iam:TagInstanceProfile",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies"
     ]
     resources = ["*"]
   }
@@ -197,7 +207,8 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "ec2:DescribeAccountAttributes",
       "ec2:DescribeSecurityGroups",
       "ec2:CreateTags",
-      "ec2:DeleteTags"
+      "ec2:DeleteTags",
+      "ec2:DescribeImages"
     ]
     resources = ["*"]
   }
