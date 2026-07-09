@@ -134,3 +134,24 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
+
+
+# ── S3 VPC Gateway Endpoint ───────────────────────────────────────────────────
+# Free gateway endpoint — routes S3 traffic from private subnets directly
+# to S3 without traversing the NAT Gateway.
+# Eliminates NAT data processing charges for S3 operations.
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.platform.id
+  service_name      = "com.amazonaws.us-east-1.s3"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = concat(
+    [aws_route_table.private.id],
+    [aws_route_table.public.id]
+  )
+
+  tags = {
+    Name = "vpce-s3-platform"
+  }
+}

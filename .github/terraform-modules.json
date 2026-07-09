@@ -14,6 +14,11 @@
       "name": "platform-compute",
       "path": "platform/compute",
       "ci_enabled": true
+    },
+    {
+      "name": "platform-storage",
+      "path": "platform/storage",
+      "ci_enabled": true
     }
   ]
 }
