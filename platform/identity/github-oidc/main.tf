@@ -102,9 +102,13 @@ resource "aws_iam_role" "terraform" {
 # Scoped to what Phase 1 requires. Expanded as new modules are added.
 # Current scope: S3 state backend, DynamoDB locking, IAM management.
 
-data "aws_iam_policy_document" "terraform_permissions" {
-  # State backend access
+# ── Terraform Role — State Backend Policy ─────────────────────────────────────
+# Scoped to specific S3 bucket and DynamoDB table.
+# No wildcards on resources — least privilege enforced.
+
+data "aws_iam_policy_document" "terraform_state" {
   statement {
+    sid    = "S3StateAccess"
     effect = "Allow"
     actions = [
       "s3:GetObject",
@@ -118,8 +122,8 @@ data "aws_iam_policy_document" "terraform_permissions" {
     ]
   }
 
-  # State locking
   statement {
+    sid    = "DynamoDBLocking"
     effect = "Allow"
     actions = [
       "dynamodb:GetItem",
@@ -130,9 +134,21 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "arn:aws:dynamodb:us-east-1:688365520256:table/stratum-tfstate-lock"
     ]
   }
+}
 
-  # IAM management
+resource "aws_iam_role_policy" "terraform_state" {
+  name   = "terraform-state-access"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_state.json
+}
+
+# ── Terraform Role — IAM Policy ───────────────────────────────────────────────
+# Custom policy — IAM actions are sensitive and warrant precise control.
+# Resource wildcard unavoidable for IAM but actions are tightly scoped.
+
+data "aws_iam_policy_document" "terraform_iam" {
   statement {
+    sid    = "IAMRoleManagement"
     effect = "Allow"
     actions = [
       "iam:CreateRole",
@@ -146,76 +162,70 @@ data "aws_iam_policy_document" "terraform_permissions" {
       "iam:PutRolePolicy",
       "iam:DeleteRolePolicy",
       "iam:GetRolePolicy",
-      "iam:CreateOpenIDConnectProvider",
-      "iam:DeleteOpenIDConnectProvider",
-      "iam:GetOpenIDConnectProvider",
-      "iam:TagOpenIDConnectProvider",
-      "iam:ListOpenIDConnectProviders",
-      "iam:PassRole",
       "iam:UpdateAssumeRolePolicy",
-      "iam:GetInstanceProfile",
-      "iam:CreateInstanceProfile",
-      "iam:DeleteInstanceProfile",
-      "iam:AddRoleToInstanceProfile",
-      "iam:RemoveRoleFromInstanceProfile",
-      "iam:ListInstanceProfiles",
-      "iam:ListInstanceProfilesForRole",
-      "iam:TagInstanceProfile",
-      "iam:ListRolePolicies",
-      "iam:ListAttachedRolePolicies"
+      "iam:PassRole",
+      "iam:TagRole",
+      "iam:UntagRole"
     ]
     resources = ["*"]
   }
 
-  # EC2 and networking management
   statement {
+    sid    = "IAMInstanceProfileManagement"
     effect = "Allow"
     actions = [
-      "ec2:DescribeVpcs",
-      "ec2:CreateVpc",
-      "ec2:DeleteVpc",
-      "ec2:ModifyVpcAttribute",
-      "ec2:DescribeVpcAttribute",
-      "ec2:DescribeSubnets",
-      "ec2:CreateSubnet",
-      "ec2:DeleteSubnet",
-      "ec2:ModifySubnetAttribute",
-      "ec2:DescribeInternetGateways",
-      "ec2:CreateInternetGateway",
-      "ec2:DeleteInternetGateway",
-      "ec2:AttachInternetGateway",
-      "ec2:DetachInternetGateway",
-      "ec2:DescribeNatGateways",
-      "ec2:CreateNatGateway",
-      "ec2:DeleteNatGateway",
-      "ec2:DescribeAddressesAttribute",
-      "ec2:DescribeNatGatewayAddresses",
-      "ec2:DescribeNetworkInterfaces",
-      "ec2:DescribeAddresses",
-      "ec2:AllocateAddress",
-      "ec2:ReleaseAddress",
-      "ec2:AssociateAddress",
-      "ec2:DisassociateAddress",
-      "ec2:DescribeRouteTables",
-      "ec2:CreateRouteTable",
-      "ec2:DeleteRouteTable",
-      "ec2:CreateRoute",
-      "ec2:DeleteRoute",
-      "ec2:AssociateRouteTable",
-      "ec2:DisassociateRouteTable",
-      "ec2:DescribeAvailabilityZones",
-      "ec2:DescribeAccountAttributes",
-      "ec2:DescribeSecurityGroups",
-      "ec2:CreateTags",
-      "ec2:DeleteTags",
-      "ec2:DescribeImages"
+      "iam:CreateInstanceProfile",
+      "iam:DeleteInstanceProfile",
+      "iam:GetInstanceProfile",
+      "iam:ListInstanceProfiles",
+      "iam:ListInstanceProfilesForRole",
+      "iam:AddRoleToInstanceProfile",
+      "iam:RemoveRoleFromInstanceProfile",
+      "iam:TagInstanceProfile"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "IAMOIDCManagement"
+    effect = "Allow"
+    actions = [
+      "iam:CreateOpenIDConnectProvider",
+      "iam:DeleteOpenIDConnectProvider",
+      "iam:GetOpenIDConnectProvider",
+      "iam:ListOpenIDConnectProviders",
+      "iam:TagOpenIDConnectProvider"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "IAMPolicyManagement"
+    effect = "Allow"
+    actions = [
+      "iam:CreatePolicy",
+      "iam:DeletePolicy",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListPolicies",
+      "iam:ListPolicyVersions"
     ]
     resources = ["*"]
   }
 }
 
-resource "aws_iam_role_policy" "terraform" {
-  name   = "terraform-provisioning-permissions"
+resource "aws_iam_role_policy" "terraform_iam" {
+  name   = "terraform-iam-management"
   role   = aws_iam_role.terraform.id
-  policy = data.aws_iam_policy_document.terraform_permissions.json
+  policy = data.aws_iam_policy_document.terraform_iam.json
+}
+
+# ── Terraform Role — EC2 Policy ───────────────────────────────────────────────
+# AWS managed policy — AmazonEC2FullAccess covers all EC2 and networking
+# operations needed across Phase 1. Simpler than maintaining a custom
+# permission list that grows with every new EC2 feature used.
+
+resource "aws_iam_role_policy_attachment" "terraform_ec2" {
+  role       = aws_iam_role.terraform.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
 }
