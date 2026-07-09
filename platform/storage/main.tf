@@ -123,3 +123,4 @@ resource "aws_s3_bucket_policy" "application" {
   policy = data.aws_iam_policy_document.application_bucket_policy.json
 }
 
+
