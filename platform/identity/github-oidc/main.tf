@@ -229,3 +229,60 @@ resource "aws_iam_role_policy_attachment" "terraform_ec2" {
   role       = aws_iam_role.terraform.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
 }
+
+
+data "aws_iam_policy_document" "terraform_s3" {
+  statement {
+    sid    = "S3ApplicationBucketManagement"
+    effect = "Allow"
+    actions = [
+      "s3:CreateBucket",
+      "s3:DeleteBucket",
+      "s3:GetBucketPolicy",
+      "s3:PutBucketPolicy",
+      "s3:DeleteBucketPolicy",
+      "s3:GetBucketVersioning",
+      "s3:PutBucketVersioning",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:PutBucketPublicAccessBlock",
+      "s3:GetEncryptionConfiguration",
+      "s3:PutEncryptionConfiguration",
+      "s3:GetLifecycleConfiguration",
+      "s3:PutLifecycleConfiguration",
+      "s3:GetBucketTagging",
+      "s3:PutBucketTagging",
+      "s3:ListAllMyBuckets",
+      "s3:GetBucketLocation",
+      "s3:GetBucketRequestPayment",
+      "s3:HeadBucket",
+      "s3:HeadObject",
+      "s3:GetBucketAcl",
+      "s3:GetBucketCORS",
+      "s3:GetBucketLogging",
+      "s3:GetBucketObjectLockConfiguration",
+      "s3:GetBucketReplication",
+      "s3:GetBucketWebsite",
+      "s3:GetAccelerateConfiguration"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "VPCEndpointManagement"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateVpcEndpoint",
+      "ec2:DeleteVpcEndpoints",
+      "ec2:DescribeVpcEndpoints",
+      "ec2:ModifyVpcEndpoint",
+      "ec2:DescribePrefixLists"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "terraform_s3" {
+  name   = "terraform-s3-management"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_s3.json
+}
