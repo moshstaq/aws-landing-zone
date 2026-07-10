@@ -82,6 +82,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
 data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "cloudtrail_bucket_policy" {
+
+  statement {
+    sid    = "AllowTerraformRole"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/role-terraform-aws-landing-zone"
+      ]
+    }
+
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.cloudtrail.arn,
+      "${aws_s3_bucket.cloudtrail.arn}/*"
+    ]
+  }
+
   statement {
     sid    = "AWSCloudTrailAclCheck"
     effect = "Allow"
@@ -241,3 +260,5 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
     Currency = "USD"
   }
 }
+
+
