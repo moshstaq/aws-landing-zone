@@ -19,6 +19,11 @@
       "name": "platform-storage",
       "path": "platform/storage",
       "ci_enabled": true
+    },
+    {
+      "name": "platform-ecr",
+      "path": "platform/ecr",
+      "ci_enabled": true
     }
   ]
 }
