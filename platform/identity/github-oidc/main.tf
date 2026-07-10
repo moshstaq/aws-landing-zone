@@ -286,3 +286,35 @@ resource "aws_iam_role_policy" "terraform_s3" {
   role   = aws_iam_role.terraform.id
   policy = data.aws_iam_policy_document.terraform_s3.json
 }
+
+data "aws_iam_policy_document" "terraform_ecr" {
+  statement {
+    sid    = "ECRManagement"
+    effect = "Allow"
+    actions = [
+      "ecr:CreateRepository",
+      "ecr:DeleteRepository",
+      "ecr:DescribeRepositories",
+      "ecr:GetRepositoryPolicy",
+      "ecr:SetRepositoryPolicy",
+      "ecr:DeleteRepositoryPolicy",
+      "ecr:PutLifecyclePolicy",
+      "ecr:GetLifecyclePolicy",
+      "ecr:DeleteLifecyclePolicy",
+      "ecr:ListTagsForResource",
+      "ecr:TagResource",
+      "ecr:UntagResource",
+      "ecr:PutImageTagMutability",
+      "ecr:PutImageScanningConfiguration",
+      "ecr:GetRegistryPolicy",
+      "ecr:DescribeRegistry"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "terraform_ecr" {
+  name   = "terraform-ecr-management"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_ecr.json
+}
