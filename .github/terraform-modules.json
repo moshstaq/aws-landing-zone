@@ -8,7 +8,7 @@
     {
       "name": "platform-networking",
       "path": "platform/networking",
-      "ci_enabled": true
+      "ci_enabled": false 
     },
     {
       "name": "platform-compute",
