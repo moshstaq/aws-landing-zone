@@ -24,6 +24,11 @@
       "name": "platform-ecr",
       "path": "platform/ecr",
       "ci_enabled": true
+    },
+    {
+      "name": "platform-observability",
+      "path": "platform/observability",
+      "ci_enabled": true
     }
   ]
 }
