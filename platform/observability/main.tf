@@ -207,6 +207,13 @@ data "aws_instance" "platform" {
     name   = "tag:Name"
     values = ["ec2-platform-validation"]
   }
+
+  filter {
+    name   = "instance-state-name"
+    values = ["running", "stopped"]
+  }
+
+
 }
 
 resource "aws_cloudwatch_metric_alarm" "ec2_cpu_high" {
