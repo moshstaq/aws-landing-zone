@@ -403,3 +403,86 @@ resource "aws_iam_role_policy" "terraform_observability" {
   role   = aws_iam_role.terraform.id
   policy = data.aws_iam_policy_document.terraform_observability.json
 }
+
+
+data "aws_iam_policy_document" "terraform_compute_scaling" {
+  statement {
+    sid    = "ELBManagement"
+    effect = "Allow"
+    actions = [
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:ModifyTargetGroupAttributes",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:RegisterTargets",
+      "elasticloadbalancing:DeregisterTargets",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:RemoveTags",
+      "elasticloadbalancing:DescribeTags"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AutoScalingManagement"
+    effect = "Allow"
+    actions = [
+      "autoscaling:CreateAutoScalingGroup",
+      "autoscaling:DeleteAutoScalingGroup",
+      "autoscaling:DescribeAutoScalingGroups",
+      "autoscaling:UpdateAutoScalingGroup",
+      "autoscaling:CreateLaunchConfiguration",
+      "autoscaling:DeleteLaunchConfiguration",
+      "autoscaling:DescribeLaunchConfigurations",
+      "autoscaling:PutScalingPolicy",
+      "autoscaling:DeletePolicy",
+      "autoscaling:DescribePolicies",
+      "autoscaling:DescribeScalingActivities",
+      "autoscaling:DescribeAutoScalingInstances",
+      "autoscaling:TerminateInstanceInAutoScalingGroup",
+      "autoscaling:SetDesiredCapacity",
+      "autoscaling:DescribeLifecycleHooks",
+      "autoscaling:DescribeNotificationConfigurations",
+      "autoscaling:DescribeTags",
+      "autoscaling:CreateOrUpdateTags",
+      "autoscaling:DeleteTags"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "LaunchTemplateManagement"
+    effect = "Allow"
+    actions = [
+      "ec2:CreateLaunchTemplate",
+      "ec2:DeleteLaunchTemplate",
+      "ec2:DescribeLaunchTemplates",
+      "ec2:DescribeLaunchTemplateVersions",
+      "ec2:CreateLaunchTemplateVersion",
+      "ec2:DeleteLaunchTemplateVersions",
+      "ec2:ModifyLaunchTemplate",
+      "ec2:RunInstances",
+      "ec2:TerminateInstances",
+      "ec2:DescribeInstanceTypes"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "terraform_compute_scaling" {
+  name   = "terraform-compute-scaling-management"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_compute_scaling.json
+}
