@@ -15,3 +15,4 @@ variable "github_repo" {
   type        = string
   default     = "aws-landing-zone"
 }
+

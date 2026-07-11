@@ -63,7 +63,10 @@ resource "aws_subnet" "private" {
 # Single EIP — one NAT Gateway per ADR-003.
 
 resource "aws_eip" "nat" {
+  count  = var.nat_gateway_enabled ? 1 : 0
   domain = "vpc"
+
+
 
   tags = {
     Name = "eip-nat-platform"
@@ -79,7 +82,8 @@ resource "aws_eip" "nat" {
 # Production recommendation: one NAT Gateway per AZ.
 
 resource "aws_nat_gateway" "platform" {
-  allocation_id = aws_eip.nat.id
+  count         = var.nat_gateway_enabled ? 1 : 0
+  allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public[0].id
 
   tags = {
@@ -119,9 +123,12 @@ resource "aws_route_table_association" "public" {
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.platform.id
 
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.platform.id
+  dynamic "route" {
+    for_each = var.nat_gateway_enabled ? [1] : []
+    content {
+      cidr_block     = "0.0.0.0/0"
+      nat_gateway_id = aws_nat_gateway.platform[0].id
+    }
   }
 
   tags = {
