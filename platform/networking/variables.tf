@@ -33,3 +33,9 @@ variable "environment" {
   type        = string
   default     = "platform"
 }
+
+variable "nat_gateway_enabled" {
+  description = "Whether to deploy the NAT Gateway. Set to false to save cost between sessions."
+  type        = bool
+  default     = false
+}
