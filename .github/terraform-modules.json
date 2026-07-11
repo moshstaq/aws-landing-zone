@@ -29,6 +29,11 @@
       "name": "platform-observability",
       "path": "platform/observability",
       "ci_enabled": true
+    },
+    {
+      "name": "platform-compute-scaling",
+      "path": "platform/compute-scaling",
+      "ci_enabled": true
     }
   ]
 }
