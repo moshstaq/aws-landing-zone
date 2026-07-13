@@ -12,7 +12,6 @@ credentials
 
 # Secrets
 *.key
-*secret*
 *password*
 *.env
 
@@ -29,3 +28,7 @@ Thumbs.db
 # Logs
 *.log
 sessionmanager-bundle/
+# Exception — secrets-manager is a Terraform module, not a secret file
+!platform/secrets-manager/
+!platform/secrets-manager/*.tf
+!platform/secrets-manager/.terraform.lock.hcl
