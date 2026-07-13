@@ -486,3 +486,32 @@ resource "aws_iam_role_policy" "terraform_compute_scaling" {
   role   = aws_iam_role.terraform.id
   policy = data.aws_iam_policy_document.terraform_compute_scaling.json
 }
+
+data "aws_iam_policy_document" "terraform_secrets" {
+  statement {
+    sid    = "SecretsManagerManagement"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:CreateSecret",
+      "secretsmanager:DeleteSecret",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:ListSecrets",
+      "secretsmanager:PutSecretValue",
+      "secretsmanager:RestoreSecret",
+      "secretsmanager:TagResource",
+      "secretsmanager:UntagResource",
+      "secretsmanager:UpdateSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:PutResourcePolicy",
+      "secretsmanager:DeleteResourcePolicy"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "terraform_secrets" {
+  name   = "terraform-secrets-management"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_secrets.json
+}
