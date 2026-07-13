@@ -33,6 +33,11 @@
     {
       "name": "platform-compute-scaling",
       "path": "platform/compute-scaling",
+      "ci_enabled": false
+    },
+    {
+      "name": "platform-secrets",
+      "path": "platform/secrets-manager",
       "ci_enabled": true
     }
   ]
