@@ -109,4 +109,4 @@ This mirrors the pattern established in azure-landing-zone where governance and 
 - `docs/programme/phase1-cost-reconciliation.md` — cost analysis
 - `docs/programme/phase1-security-review.md` — security findings
 - `.github/terraform-modules.json` — CI module registry
-- ADR-003 — single NAT Gateway cost decision
+- ADR-002 — single NAT Gateway cost decision
