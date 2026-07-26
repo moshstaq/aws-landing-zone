@@ -39,6 +39,11 @@
       "name": "platform-secrets",
       "path": "platform/secrets-manager",
       "ci_enabled": true
+    },
+    {
+      "name": "platform-eks",
+      "path": "platform/eks",
+      "ci_enabled": false
     }
   ]
 }

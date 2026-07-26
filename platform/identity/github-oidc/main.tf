@@ -515,3 +515,50 @@ resource "aws_iam_role_policy" "terraform_secrets" {
   role   = aws_iam_role.terraform.id
   policy = data.aws_iam_policy_document.terraform_secrets.json
 }
+
+data "aws_iam_policy_document" "terraform_eks" {
+  statement {
+    sid    = "EKSManagement"
+    effect = "Allow"
+    actions = [
+      "eks:CreateCluster",
+      "eks:DeleteCluster",
+      "eks:DescribeCluster",
+      "eks:ListClusters",
+      "eks:UpdateClusterConfig",
+      "eks:UpdateClusterVersion",
+      "eks:CreateNodegroup",
+      "eks:DeleteNodegroup",
+      "eks:DescribeNodegroup",
+      "eks:ListNodegroups",
+      "eks:UpdateNodegroupConfig",
+      "eks:UpdateNodegroupVersion",
+      "eks:TagResource",
+      "eks:UntagResource",
+      "eks:ListTagsForResource",
+      "eks:AssociateIdentityProviderConfig",
+      "eks:DescribeIdentityProviderConfig",
+      "eks:DisassociateIdentityProviderConfig",
+      "eks:ListIdentityProviderConfigs"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "TLSCertificate"
+    effect = "Allow"
+    actions = [
+      "iam:GetOpenIDConnectProvider",
+      "iam:CreateOpenIDConnectProvider",
+      "iam:DeleteOpenIDConnectProvider",
+      "iam:TagOpenIDConnectProvider"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "terraform_eks" {
+  name   = "terraform-eks-management"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_eks.json
+}
