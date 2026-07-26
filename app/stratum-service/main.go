@@ -63,7 +63,7 @@ func rootHandler(region string) http.HandlerFunc {
 
 		response := Response{
 			Service:   "stratum-service",
-			Version:   "1.0.0",
+			Version:   "1.1.0",
 			Timestamp: time.Now().UTC(),
 			Region:    region,
 			Message:   "Stratum Retail Group — Platform Service",
