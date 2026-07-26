@@ -292,6 +292,7 @@ data "aws_iam_policy_document" "terraform_ecr" {
     sid    = "ECRManagement"
     effect = "Allow"
     actions = [
+      "ecr:GetAuthorizationToken",
       "ecr:CreateRepository",
       "ecr:DeleteRepository",
       "ecr:DescribeRepositories",
@@ -307,7 +308,14 @@ data "aws_iam_policy_document" "terraform_ecr" {
       "ecr:PutImageTagMutability",
       "ecr:PutImageScanningConfiguration",
       "ecr:GetRegistryPolicy",
-      "ecr:DescribeRegistry"
+      "ecr:DescribeRegistry",
+      "ecr:BatchGetImage",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+      "ecr:PutImage"
     ]
     resources = ["*"]
   }
