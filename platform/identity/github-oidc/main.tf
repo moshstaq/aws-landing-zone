@@ -679,6 +679,10 @@ data "aws_iam_policy_document" "stratum_platform_permissions" {
       "secretsmanager:DescribeSecret",
       "secretsmanager:ListSecrets",
       "eks:DescribeCluster",
+      "ec2:DescribeVpcAttribute",
+      "ecr:DescribeImages",
+      "logs:ListTagsLogGroup",
+      "secretsmanager:GetResourcePolicy",
       "eks:ListClusters"
     ]
     resources = ["*"]
