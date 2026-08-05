@@ -570,3 +570,198 @@ resource "aws_iam_role_policy" "terraform_eks" {
   role   = aws_iam_role.terraform.id
   policy = data.aws_iam_policy_document.terraform_eks.json
 }
+
+
+# ── Stratum Platform — GitHub Actions Role ────────────────────────────────────
+# Separate identity for stratum-platform repository.
+# Consumer role — reads data sources and provisions workload environments.
+# Cannot manage platform foundation resources.
+
+data "aws_iam_policy_document" "stratum_platform_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:${var.github_org}/stratum-platform:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "stratum_platform_github" {
+  name               = "role-github-actions-stratum-platform"
+  assume_role_policy = data.aws_iam_policy_document.stratum_platform_trust.json
+  description        = "Assumed by GitHub Actions via OIDC for stratum-platform"
+}
+
+# ── Stratum Platform — Provisioning Role ──────────────────────────────────────
+# Separate provisioning role for stratum-platform.
+# Scoped to consumer operations — data source reads, workload environment
+# provisioning. Cannot modify platform foundation infrastructure.
+
+data "aws_iam_policy_document" "stratum_platform_provisioning_trust" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
+
+    principals {
+      type        = "AWS"
+      identifiers = [aws_iam_role.stratum_platform_github.arn]
+    }
+  }
+}
+
+resource "aws_iam_role" "stratum_platform_terraform" {
+  name               = "role-terraform-stratum-platform"
+  assume_role_policy = data.aws_iam_policy_document.stratum_platform_provisioning_trust.json
+  description        = "Assumed by Terraform for stratum-platform resource provisioning"
+}
+
+# ── GitHub Actions → Provisioning Role Permission ─────────────────────────────
+
+data "aws_iam_policy_document" "stratum_platform_github_permissions" {
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:AssumeRole"]
+    resources = [aws_iam_role.stratum_platform_terraform.arn]
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["sts:TagSession"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "stratum_platform_github" {
+  name   = "assume-terraform-role"
+  role   = aws_iam_role.stratum_platform_github.id
+  policy = data.aws_iam_policy_document.stratum_platform_github_permissions.json
+}
+
+# ── Stratum Platform — Consumer Permissions ───────────────────────────────────
+# Read-only on platform resources + write on workload boundaries.
+
+data "aws_iam_policy_document" "stratum_platform_permissions" {
+  statement {
+    sid    = "ReadPlatformResources"
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeVpcs",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeInternetGateways",
+      "ec2:DescribeRouteTables",
+      "ec2:DescribeVpcEndpoints",
+      "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeAccountAttributes",
+      "ecr:DescribeRepositories",
+      "ecr:ListImages",
+      "sns:GetTopicAttributes",
+      "sns:ListTopics",
+      "logs:DescribeLogGroups",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:ListSecrets",
+      "eks:DescribeCluster",
+      "ec2:DescribeVpcAttribute",
+      "ecr:DescribeImages",
+      "logs:ListTagsLogGroup",
+      "secretsmanager:GetResourcePolicy",
+      "eks:ListClusters"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "WorkloadEnvironmentProvisioning"
+    effect = "Allow"
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:GetRolePolicy",
+      "iam:PassRole",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "ec2:CreateSecurityGroup",
+      "ec2:DeleteSecurityGroup",
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:CreateTags",
+      "ec2:DeleteTags",
+      "s3:CreateBucket",
+      "s3:DeleteBucket",
+      "s3:GetBucketPolicy",
+      "s3:PutBucketPolicy",
+      "s3:GetBucketVersioning",
+      "s3:PutBucketVersioning",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:PutBucketPublicAccessBlock",
+      "s3:GetEncryptionConfiguration",
+      "s3:PutEncryptionConfiguration",
+      "s3:GetLifecycleConfiguration",
+      "s3:PutLifecycleConfiguration",
+      "s3:GetBucketTagging",
+      "s3:PutBucketTagging",
+      "s3:GetBucketLocation",
+      "s3:GetBucketAcl",
+      "s3:HeadBucket",
+      "s3:ListAllMyBuckets"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "StateBackendAccess"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      "arn:aws:s3:::stratum-tfstate-7pbqp4",
+      "arn:aws:s3:::stratum-tfstate-7pbqp4/*"
+    ]
+  }
+
+  statement {
+    sid    = "StateLocking"
+    effect = "Allow"
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:DeleteItem"
+    ]
+    resources = [
+      "arn:aws:dynamodb:us-east-1:688365520256:table/stratum-tfstate-lock"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "stratum_platform_terraform" {
+  name   = "stratum-platform-permissions"
+  role   = aws_iam_role.stratum_platform_terraform.id
+  policy = data.aws_iam_policy_document.stratum_platform_permissions.json
+}
