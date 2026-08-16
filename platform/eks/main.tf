@@ -189,9 +189,13 @@ data "aws_iam_policy_document" "app_pod_trust" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "${local.oidc_issuer}:sub"
-      values   = ["system:serviceaccount:stratum:stratum-app"]
+      values = [
+        "system:serviceaccount:stratum:stratum-app",
+        "system:serviceaccount:stratum-workloads:stratum-catalogue",
+        "system:serviceaccount:stratum-workloads:stratum-orders"
+      ]
     }
   }
 }
