@@ -726,7 +726,20 @@ data "aws_iam_policy_document" "stratum_platform_permissions" {
       "s3:GetBucketLocation",
       "s3:GetBucketAcl",
       "s3:HeadBucket",
-      "s3:ListAllMyBuckets"
+      "s3:ListAllMyBuckets",
+      "ecr:CreateRepository",
+      "ecr:DeleteRepository",
+      "ecr:PutLifecyclePolicy",
+      "ecr:GetLifecyclePolicy",
+      "ecr:DeleteLifecyclePolicy",
+      "ecr:PutImageTagMutability",
+      "ecr:PutImageScanningConfiguration",
+      "ecr:GetRepositoryPolicy",
+      "ecr:SetRepositoryPolicy",
+      "ecr:DeleteRepositoryPolicy",
+      "ecr:ListTagsForResource",
+      "ecr:TagResource",
+      "ecr:UntagResource"
     ]
     resources = ["*"]
   }
