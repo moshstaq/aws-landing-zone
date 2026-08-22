@@ -269,3 +269,136 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
 }
 
 
+# ── CloudWatch Dashboard ──────────────────────────────────────────────────────
+# Single view of platform health during flash sale operations.
+# Four priority metrics: pod CPU, pod memory, pod restarts, node health.
+# Dashboard persists when EKS is destroyed — shows no data but costs nothing.
+
+resource "aws_cloudwatch_dashboard" "platform" {
+  dashboard_name = "stratum-platform"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "text"
+        x      = 0
+        y      = 0
+        width  = 24
+        height = 1
+        properties = {
+          markdown = "# Stratum Platform — Flash Sale Operations Dashboard"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 1
+        width  = 12
+        height = 6
+        properties = {
+          title   = "Pod CPU Utilisation"
+          region  = "us-east-1"
+          period  = 60
+          stat    = "Average"
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["ContainerInsights", "pod_cpu_utilization", "PodName", "stratum-catalogue", "ClusterName", "eks-platform", "Namespace", "stratum-workloads", { "label" : "catalogue" }],
+            ["ContainerInsights", "pod_cpu_utilization", "PodName", "stratum-orders", "ClusterName", "eks-platform", "Namespace", "stratum-workloads", { "label" : "orders" }]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 1
+        width  = 12
+        height = 6
+        properties = {
+          title   = "Pod Memory Utilisation"
+          region  = "us-east-1"
+          period  = 60
+          stat    = "Average"
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["ContainerInsights", "pod_memory_utilization", "PodName", "stratum-catalogue", "ClusterName", "eks-platform", "Namespace", "stratum-workloads", { "label" : "catalogue" }],
+            ["ContainerInsights", "pod_memory_utilization", "PodName", "stratum-orders", "ClusterName", "eks-platform", "Namespace", "stratum-workloads", { "label" : "orders" }]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 7
+        width  = 12
+        height = 6
+        properties = {
+          title   = "Pod Restart Count"
+          region  = "us-east-1"
+          period  = 300
+          stat    = "Maximum"
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["ContainerInsights", "pod_number_of_container_restarts", "PodName", "stratum-catalogue", "ClusterName", "eks-platform", "Namespace", "stratum-workloads", { "label" : "catalogue" }],
+            ["ContainerInsights", "pod_number_of_container_restarts", "PodName", "stratum-orders", "ClusterName", "eks-platform", "Namespace", "stratum-workloads", { "label" : "orders" }]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 7
+        width  = 12
+        height = 6
+        properties = {
+          title   = "Node CPU Utilisation"
+          region  = "us-east-1"
+          period  = 60
+          stat    = "Average"
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["ContainerInsights", "node_cpu_utilization", "ClusterName", "eks-platform", { "label" : "Node CPU" }]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 13
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Running Pod Count"
+          region = "us-east-1"
+          period = 60
+          stat   = "Average"
+          view   = "singleValue"
+          metrics = [
+            ["ContainerInsights", "namespace_number_of_running_pods", "Namespace", "stratum-workloads", "ClusterName", "eks-platform", { "label" : "workload pods" }]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 13
+        width  = 12
+        height = 6
+        properties = {
+          title   = "Node Memory Utilisation"
+          region  = "us-east-1"
+          period  = 60
+          stat    = "Average"
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["ContainerInsights", "node_memory_utilization", "ClusterName", "eks-platform", { "label" : "Node Memory" }]
+          ]
+        }
+      }
+    ]
+  })
+}
