@@ -23,7 +23,3 @@ output "app_pod_role_arn" {
   value       = aws_iam_role.app_pod.arn
 }
 
-output "node_group_role_arn" {
-  description = "ARN of the EKS node group role"
-  value       = aws_iam_role.eks_node.arn
-}
