@@ -50,37 +50,8 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 # Worker node role — three managed policies covering cluster
 # communication, VPC networking for pods, and ECR image pulls.
 
-data "aws_iam_policy_document" "eks_node_trust" {
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "eks_node" {
-  name               = "role-eks-node-platform"
-  assume_role_policy = data.aws_iam_policy_document.eks_node_trust.json
-  description        = "EKS worker node role"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-resource "aws_iam_role_policy_attachment" "eks_ecr_readonly" {
-  role       = aws_iam_role.eks_node.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+data "aws_iam_role" "eks_node" {
+  name = "role-eks-node-platform"
 }
 
 # ── EKS Cluster ───────────────────────────────────────────────────────────────
@@ -132,7 +103,7 @@ resource "aws_iam_openid_connect_provider" "eks" {
 resource "aws_eks_node_group" "platform" {
   cluster_name    = aws_eks_cluster.platform.name
   node_group_name = "ng-platform"
-  node_role_arn   = aws_iam_role.eks_node.arn
+  node_role_arn   = data.aws_iam_role.eks_node.arn
   subnet_ids      = data.aws_subnets.private.ids
 
   instance_types = [var.node_instance_type]
@@ -148,9 +119,7 @@ resource "aws_eks_node_group" "platform" {
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
-    aws_iam_role_policy_attachment.eks_ecr_readonly
+    aws_eks_cluster.platform
   ]
 
   tags = {
@@ -221,3 +190,18 @@ resource "aws_iam_role_policy" "app_pod" {
   role   = aws_iam_role.app_pod.id
   policy = data.aws_iam_policy_document.app_pod_permissions.json
 }
+
+# ── Container Insights ────────────────────────────────────────────────────────
+# Enables CloudWatch Container Insights for pod-level observability.
+# Pushes CPU, memory, network, restart count, and container status
+# to CloudWatch automatically. No application code changes required.
+
+resource "aws_eks_addon" "cloudwatch_observability" {
+  cluster_name = aws_eks_cluster.platform.name
+  addon_name   = "amazon-cloudwatch-observability"
+
+  depends_on = [
+    aws_eks_node_group.platform
+  ]
+}
+

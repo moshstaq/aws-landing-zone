@@ -765,3 +765,48 @@ resource "aws_iam_role_policy" "stratum_platform_terraform" {
   role   = aws_iam_role.stratum_platform_terraform.id
   policy = data.aws_iam_policy_document.stratum_platform_permissions.json
 }
+
+
+# ── EKS Node Role ─────────────────────────────────────────────────────────────
+# Centralised in identity for auditability. Every IAM role and its
+# policies are visible from one module.
+# Created independently of EKS — the role persists even when the
+# cluster is destroyed between sessions for cost management.
+
+data "aws_iam_policy_document" "eks_node_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "eks_node" {
+  name               = "role-eks-node-platform"
+  assume_role_policy = data.aws_iam_policy_document.eks_node_trust.json
+  description        = "EKS worker node role"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_ecr_readonly" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cloudwatch_agent" {
+  role       = aws_iam_role.eks_node.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
