@@ -2,7 +2,7 @@ markdown
 
 # AWS Landing Zone
 
-Production-pattern AWS platform foundation for Stratum Retail Group, built with Terraform. This repository provisions the infrastructure that the US-acquired business runs on VPC networking, compute, container platform, observability, and secure identity. Every resource is defined in Terraform, every deployment authenticates via OIDC with no stored credentials, and every architectural decision is documented in an ADR.
+AWS platform foundation for Stratum Retail Group, built with Terraform. This repository provisions the infrastructure the US-acquired business runs on: VPC networking, compute, container platform, observability, and identity. Every resource is defined in Terraform, every deployment authenticates via OIDC with no stored credentials, and every architectural decision is documented in an ADR.
 
 [![Terraform](https://img.shields.io/badge/Terraform-1.5+-623CE4?logo=terraform)](https://terraform.io)
 [![AWS](https://img.shields.io/badge/AWS-Landing%20Zone-FF9900?logo=amazon-aws)](https://aws.amazon.com)
@@ -14,7 +14,7 @@ Production-pattern AWS platform foundation for Stratum Retail Group, built with 
 
 Stratum Retail Group acquired a US-based retail business running on AWS. The acquisition brought two problems into focus: unpredictable traffic spikes during flash sales were causing the US website to crash and lose revenue, and there was no visibility into system errors or performance bottlenecks across either estate.
 
-This landing zone addresses both. It establishes a production-pattern AWS foundation with elastic compute scaling that absorbs flash sale traffic spikes automatically, and centralised observability that surfaces errors and performance issues before they become incidents.
+This landing zone addresses both. It establishes an AWS foundation with elastic compute scaling that absorbs flash sale traffic spikes automatically, and centralised observability that surfaces errors and performance issues before they become incidents.
 
 ---
 
@@ -124,9 +124,7 @@ aws-landing-zone/
 Two-step OIDC role chaining — no stored credentials anywhere:
 
 GitHub runner
-→ OIDC token exchange → GitHub Actions role
-→ sts:AssumeRole → Terraform provisioning role
-→ provisions resources
+→ OIDC token exchange → GitHub Actions role → sts:AssumeRole → Terraform provisioning role → provisions resources
 
 ### Module Registry
 
@@ -218,10 +216,10 @@ This platform runs on a £10/month budget. Resources that carry significant hour
 
 ## Related Repositories
 
-| Repository                                                           | Purpose                   |
-| -------------------------------------------------------------------- | ------------------------- |
+| Repository | Relationship ---------------------------------------------------------------------------------------------------------------- |
 | [azure-landing-zone](https://github.com/moshstaq/azure-landing-zone) | Azure platform foundation |
-| [stratum-platform](https://github.com/moshstaq/stratum-platform)     | Multi-cloud consumer      |
+| [stratum-platform](https://github.com/moshstaq/stratum-platform) | FastAPI services running on this foundation's EKS cluster via IRSA |
+| [stratum-workloads](https://github.com/moshstaq/stratum-workloads) | Multi-cloud consumer |
 
 ---
 
