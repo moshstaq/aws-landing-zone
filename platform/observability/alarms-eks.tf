@@ -20,7 +20,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_cpu_warning" {
     Namespace   = "stratum-workloads"
   }
 
-  alarm_actions = [data.aws_sns_topic.platform_alerts.arn]
+  alarm_actions = [aws_sns_topic.platform_alerts.arn]
 
   tags = {
     Severity = "warning"
@@ -44,7 +44,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_cpu_critical" {
     Namespace   = "stratum-workloads"
   }
 
-  alarm_actions = [data.aws_sns_topic.platform_alerts.arn]
+  alarm_actions = [aws_sns_topic.platform_alerts.arn]
 
   tags = {
     Severity = "critical"
@@ -68,7 +68,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_memory_warning" {
     Namespace   = "stratum-workloads"
   }
 
-  alarm_actions = [data.aws_sns_topic.platform_alerts.arn]
+  alarm_actions = [aws_sns_topic.platform_alerts.arn]
 
   tags = {
     Severity = "warning"
@@ -92,7 +92,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_memory_critical" {
     Namespace   = "stratum-workloads"
   }
 
-  alarm_actions = [data.aws_sns_topic.platform_alerts.arn]
+  alarm_actions = [aws_sns_topic.platform_alerts.arn]
 
   tags = {
     Severity = "critical"
@@ -116,7 +116,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_restart" {
     Namespace   = "stratum-workloads"
   }
 
-  alarm_actions = [data.aws_sns_topic.platform_alerts.arn]
+  alarm_actions = [aws_sns_topic.platform_alerts.arn]
 
   tags = {
     Severity = "critical"
@@ -140,7 +140,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_count_low" {
     Namespace   = "stratum-workloads"
   }
 
-  alarm_actions = [data.aws_sns_topic.platform_alerts.arn]
+  alarm_actions = [aws_sns_topic.platform_alerts.arn]
 
   tags = {
     Severity = "critical"
@@ -149,6 +149,4 @@ resource "aws_cloudwatch_metric_alarm" "pod_count_low" {
 
 # ── SNS Reference ─────────────────────────────────────────────────────────────
 
-data "aws_sns_topic" "platform_alerts" {
-  name = "stratum-platform-alerts"
-}
+

@@ -823,3 +823,58 @@ resource "aws_iam_role_policy_attachment" "eks_cloudwatch_agent" {
   role       = aws_iam_role.eks_node.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
+
+
+# ── EKS Cluster Role ─────────────────────────────────────────────────────────────
+# Centralised in identity for auditability. Every IAM role and its policies are visible from one module.
+# Created independently of EKS — the role persists even when the cluster is destroyed between sessions for cost management.
+
+data "aws_iam_policy_document" "eks_cluster_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["eks.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "eks_cluster" {
+  name               = "role-eks-cluster-platform"
+  assume_role_policy = data.aws_iam_policy_document.eks_cluster_trust.json
+  description        = "EKS cluster role allows control plane to manage AWS resources"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role       = aws_iam_role.eks_cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+
+# ── DNS Role ─────────────────────────────────────────────────────────────
+# Centralised in identity for auditability. Every IAM role and its policies are visible from one module.
+data "aws_iam_policy_document" "terraform_route53" {
+  statement {
+    sid    = "Route53HealthChecks"
+    effect = "Allow"
+    actions = [
+      "route53:GetHealthCheck",
+      "route53:CreateHealthCheck",
+      "route53:DeleteHealthCheck",
+      "route53:UpdateHealthCheck",
+      "route53:ListHealthChecks",
+      "route53:GetHealthCheckStatus",
+      "route53:ChangeTagsForResource",
+      "route53:ListTagsForResource"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "terraform_route53" {
+  name   = "terraform-route53-management"
+  role   = aws_iam_role.terraform.id
+  policy = data.aws_iam_policy_document.terraform_route53.json
+}
