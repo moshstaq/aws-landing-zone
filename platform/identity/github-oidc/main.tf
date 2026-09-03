@@ -823,3 +823,26 @@ resource "aws_iam_role_policy_attachment" "eks_cloudwatch_agent" {
   role       = aws_iam_role.eks_node.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
+
+
+# ── EKS Cluster Role ─────────────────────────────────────────────────────────────
+# Centralised in identity for auditability. Every IAM role and its policies are visible from one module.
+# Created independently of EKS — the role persists even when the cluster is destroyed between sessions for cost management.
+
+data "aws_iam_policy_document" "eks_cluster_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["eks.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "eks_cluster" {
+  name               = "role-eks-cluster-platform"
+  assume_role_policy = data.aws_iam_policy_document.eks_cluster_trust.json
+  description        = "EKS cluster role allows control plane to manage AWS resources"
+}
