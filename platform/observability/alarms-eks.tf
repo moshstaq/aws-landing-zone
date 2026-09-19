@@ -125,7 +125,7 @@ resource "aws_cloudwatch_metric_alarm" "pod_restart" {
 
 resource "aws_cloudwatch_metric_alarm" "pod_count_low" {
   alarm_name          = "stratum-pod-count-low"
-  alarm_description   = "Running pod count below expected - capacity reduced"
+  alarm_description   = "Pod count below 4, or ContainerInsights stopped publishing. Missing data treated as breaching."
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 2
   metric_name         = "namespace_number_of_running_pods"
